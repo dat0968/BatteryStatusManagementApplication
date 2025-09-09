@@ -23,6 +23,7 @@ public class BatteryReceiver extends BroadcastReceiver {
 
     private BatteryListener listener;
     private static int lastBatteryLevel = -1;
+    private  static  int lastthreshold = -1;
     private static boolean lowBatteryNotified = false;
 
     // Truyền callback qua constructor
@@ -45,8 +46,9 @@ public class BatteryReceiver extends BroadcastReceiver {
         if (listener != null) {
             listener.onBatteryChanged(batteryPct, status);
         }
-        if (batteryPct == lastBatteryLevel) return;
+        if (batteryPct == lastBatteryLevel && lastthreshold == threshold) return;
         lastBatteryLevel = batteryPct;
+        lastthreshold = threshold;
         if (batteryPct <= threshold && !lowBatteryNotified && enableNotification) {
             showLowBatteryNotification(context, batteryPct);
             lowBatteryNotified = true;

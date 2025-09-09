@@ -2,8 +2,11 @@ package com.example.batterystatusapplication;
 
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 import android.os.BatteryManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -17,6 +20,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.batterystatusapplication.BroadcastReceiver.BatteryReceiver;
+import com.example.batterystatusapplication.Services.BatteryService;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,6 +41,23 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+        // 1. Kiểm tra quyền vẽ overlay
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:" + getPackageName()));
+                startActivity(intent); // mở màn hình Settings để user cấp quyền
+                return; // dừng tiếp, chờ user cấp quyền
+            }
+        }
+
+        // Khởi chạy Foreground Service để theo dõi pin/sạc
+        Intent serviceIntent = new Intent(this, BatteryService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
 
         txtBatteryLevel = findViewById(R.id.txtBatteryLevel);
         txtChargingStatus = findViewById(R.id.txtChargingStatus);
@@ -80,6 +101,10 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(myintent);
             }
         });
+    }
+    @Override
+    protected void onResume(){
+        super.onResume();
     }
     @Override
     protected void onDestroy() {
