@@ -1,5 +1,6 @@
 package com.example.batterystatusapplication.Services;
 
+import android.app.ActivityManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -8,6 +9,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ServiceInfo;
 import android.graphics.PixelFormat;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -25,18 +27,39 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import com.example.batterystatusapplication.MainActivity;
 import com.example.batterystatusapplication.R;
 
 import java.security.Provider;
+import java.util.List;
 
 public class BatteryService extends Service {
     private BroadcastReceiver batteryReceiver;
     private WindowManager windowManager;
     private View overlayView;
     private boolean overlayDismissed = false;
+    private boolean isAppInForeground() {
+        // Kiểm tra qua ActivityManager hoặc UsageStatsManager
+        ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> runningProcesses = am.getRunningAppProcesses();
+        for (ActivityManager.RunningAppProcessInfo processInfo : runningProcesses) {
+            if (processInfo.processName.equals(getPackageName()) && processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
+                return true;
+            }
+        }
+        return false;
+    }
     @Override
     public void onCreate() {
         super.onCreate();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {  // Android 14+
+            // Kiểm tra xem có được phép start FGS không
+            if (!isAppInForeground()) {  // Implement hàm kiểm tra app foreground
+                Log.e("BatteryService", "Cannot start FGS from background");
+                stopSelf();  // Dừng service nếu không được phép
+                return;
+            }
+        }
         startForegroundService();
 
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
@@ -51,11 +74,14 @@ public class BatteryService extends Service {
                 int batteryPct = (int) ((level / (float) scale) * 100);
                 if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
                     Log.d("BatteryService", "Đang cắm sạc");
-                    showChargingOverlay(batteryPct);
+                    Intent intent1 = new Intent(context, MainActivity.class);
+                    intent1.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP); // bắt buộc khi start từ Service
+                    startActivity(intent1);
+                    //showChargingOverlay(batteryPct);
                 }
-                else {
-                    removeOverlay(); // Rút sạc → tắt overlay
-                }
+//                else {
+//                    removeOverlay(); // Rút sạc → tắt overlay
+//                }
             }
         };
 
@@ -83,16 +109,16 @@ public class BatteryService extends Service {
     }
 
     private void showChargingOverlay(int batteryPct) {
-        if (overlayView != null || overlayDismissed) return; // đã hiển thị
+        if (overlayView != null ) return; // đã hiển thị
         if (!Settings.canDrawOverlays(this)) return; // kiểm tra quyền
-        overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_charging, null);
+        overlayView = LayoutInflater.from(this).inflate(R.layout.activity_main, null);
         TextView tvBatteryPercent =  overlayView.findViewById(R.id.tvBatteryPercent);
         tvBatteryPercent.setText(batteryPct + "%");
-        Button btnClose = overlayView.findViewById(R.id.btnClose);
-        btnClose.setOnClickListener(v -> {
-            overlayDismissed = true; // đánh dấu đã đóng
-            removeOverlay();
-        });
+//        Button btnClose = overlayView.findViewById(R.id.btnClose);
+//        btnClose.setOnClickListener(v -> {
+//            overlayDismissed = true; // đánh dấu đã đóng
+//            removeOverlay();
+//        });
 
         int layoutFlag;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

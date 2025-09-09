@@ -3,16 +3,19 @@ package com.example.batterystatusapplication.BroadcastReceiver;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import com.example.batterystatusapplication.MainActivity;
 
@@ -23,8 +26,9 @@ public class BatteryReceiver extends BroadcastReceiver {
 
     private BatteryListener listener;
     private static int lastBatteryLevel = -1;
-    private  static  int lastthreshold = -1;
+    private static  int lastthreshold = -1;
     private static boolean lowBatteryNotified = false;
+    private static int lastNotifiedBatteryLevel = -1;
 
     // Truyền callback qua constructor
     public BatteryReceiver(BatteryListener listener) {
@@ -50,8 +54,11 @@ public class BatteryReceiver extends BroadcastReceiver {
         lastBatteryLevel = batteryPct;
         lastthreshold = threshold;
         if (batteryPct <= threshold && !lowBatteryNotified && enableNotification) {
-            showLowBatteryNotification(context, batteryPct);
-            lowBatteryNotified = true;
+            if (batteryPct != lastNotifiedBatteryLevel) {
+                showLowBatteryNotification(context, batteryPct);
+                lowBatteryNotified = true;
+                lastNotifiedBatteryLevel = batteryPct; // ghi nhận mức pin đã thông báo
+            }
         }
         if (batteryPct > threshold) {
             lowBatteryNotified = false;
@@ -61,8 +68,49 @@ public class BatteryReceiver extends BroadcastReceiver {
             Intent i = new Intent(context, MainActivity.class);
             /* Vì BatteryReceiver không có UI thread nên không có Task (ngăn xếp UI)
             ta cần tạo một task cho nó chứa Activity => dùng addFlags */
+//            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//            context.startActivity(i);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(i);
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                    context, 0, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            showChargingNotification(context, pendingIntent);
+        }
+    }
+    private void showChargingNotification(Context context, PendingIntent pendingIntent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                Log.w("BatteryReceiver", "POST_NOTIFICATIONS permission not granted");
+                return;
+            }
+        }
+
+        String channelId = "charging_channel";
+        String channelName = "Charging Status";
+        NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    channelId,
+                    channelName,
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
+
+        Notification notification = new NotificationCompat.Builder(context, channelId)
+                .setContentTitle("Đang sạc")
+                .setContentText("Thiết bị đang sạc, nhấn để mở ứng dụng")
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build();
+
+        if (manager != null) {
+            manager.notify(2, notification);
         }
     }
     private void showLowBatteryNotification(Context context, int batteryPct){

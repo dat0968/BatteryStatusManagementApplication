@@ -47,19 +47,19 @@
         android:layout_marginBottom="24dp"/>
 
     <!-- Button đóng overlay -->
-    <Button
-        android:id="@+id/btnClose"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Đóng"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="#FF4081"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="32dp"/>
+<!--    <Button-->
+<!--        android:id="@+id/btnClose"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Đóng"-->
+<!--        android:textColor="#FFFFFF"-->
+<!--        android:backgroundTint="#FF4081"-->
+<!--        android:paddingStart="24dp"-->
+<!--        android:paddingEnd="24dp"-->
+<!--        android:paddingTop="12dp"-->
+<!--        android:paddingBottom="12dp"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        android:layout_marginBottom="32dp"/>-->
 </androidx.constraintlayout.widget.ConstraintLayout>
